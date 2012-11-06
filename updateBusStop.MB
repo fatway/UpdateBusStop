@@ -3,9 +3,9 @@
 '       All rights reserved.
 '
 ' $Workfile: updateBusStop.MB $
-' $Revision: 0.4 $
+' $Revision: 0.5 $
 ' $Author: Lee $
-' $Date: 2012/8/28 $
+' $Date: 2012/9/14 $
 '
 ' 工具描述:
 '
@@ -25,6 +25,9 @@
 '             判断表Selection是否存在 避免程序崩溃
 '             添加shift-h为合并热键
 '             合并完成后清除全部选中站点
+'    Rev 0.5  2012/9/14
+'             为方便操作工具条中增加现有的选择和平移功能
+'             修改热键方便操作
 '
 '*****************************************************************************
 
@@ -39,6 +42,7 @@ Declare Sub Test
 
 '创建按钮的主函数
 Sub Main
+    '增加合并公交的按键
     Create ButtonPad "公交" As
         PushButton
             Calling UnionBusPoint
@@ -50,24 +54,31 @@ Sub Main
             Icon MI_ICON_MISC_4
         Show
 
+    '增加合并公交的菜单（主要为了添加快捷键）
     Create Menu "华业公交数据处理[&B]" As
-        "合并站点[&H]" + Chr$(9) + "SHIFT-H/W#H" Calling UnionBusPoint,
+        "合并站点[&H]" + "\tSHIFT-H/W#H" Calling UnionBusPoint,
         '/W#Z就是快捷键为SHIFT+Z
         '/W@Z就是快捷键为ALT+Z
         '/W^Z就是快捷键为CRTL+Z
         "(-",
-        "信息[&I]" Calling ToolInfo
+        "信息[&I]" Calling ToolInfo,
+        "(-",
+        "快速单点选择" + "\tF9/W%120/XF9" Calling 1701,
+        "快速矩形选择" + "\tF10/W%121/XF10" Calling 1722,
+        "快速地图漫游" + "\tF11/W%122/XF11" Calling 1702
     Alter Menu Bar Add "华业公交数据处理[&B]"
+
 End Sub
 
 
-'合并公交站点
+
+'合并公交站点函数
 Sub UnionBusPoint
-    Dim counter As Integer
-    Dim xc, yc As Float
-    Dim uid, irow As String
-    Dim _obj As Object
-    Dim mysymb As Symbol
+    Dim counter As Integer    '选中点位计数
+    Dim xc, yc As Float       '取坐标值
+    Dim uid As String         '取一个ID值作为合并后的新ID
+    Dim _obj As Object        '定义一个空间对象（用于遍历点位）
+    Dim mysymb As Symbol      '合并后修改样式
 
     counter = 0
     xc = 0.0
@@ -75,7 +86,9 @@ Sub UnionBusPoint
     mysymb = MakeSymbol(40,65280,12)
 
     
-    GoTo ComeOn
+    GoTo ComeOn               '添加错误捕获，解决没有选择点直接合并导致的崩溃
+
+
     '表Selection不存在时退出
 NoSelect:
     Exit Sub
@@ -88,9 +101,9 @@ ComeOn:
     '遍历点，获取点数、坐标中心、最后一个ID值信息
     Fetch First From Selection
     Do While Not EOT(Selection)
-        uid = Selection.NAME                         '''''''''''''HACK: ID
+        uid = Selection.NAME                         '''HACK: （昆明公交中ID字段为NAME）
 
-        xc = xc + CentroidX(Selection.obj)
+        xc = xc + CentroidX(Selection.obj)           '累加坐标值
         yc = yc + CentroidY(Selection.obj)
 
         counter = counter + 1
@@ -105,26 +118,24 @@ ComeOn:
     '二次遍历点，更新所有点到几何中心并变更样式
     Fetch First From Selection
     Do While Not EOT(Selection)
-        'irow = Selection.GUID
 	    _obj = Selection.obj
 	
-        '新坐标
-        'Update Selection Set obj=CreatePoint(xc, yc)
+        '设置新坐标
         Alter Object _obj Geography OBJ_GEO_POINTX, xc
         Alter Object _obj Geography OBJ_GEO_POINTY, yc
         
-	    '新样式
+	    '设置新样式
         Alter Object _obj Info OBJ_INFO_SYMBOL, mysymb
 
-        '更新点
-        Update Selection Set obj = _obj 'Where Selection.GUID = irow
+        '更新点状态到实际数据中
+        Update Selection Set obj = _obj
 
         Fetch Next From Selection
     Loop
 
     
     '统一赋值新的ID
-    Update Selection Set NewID = uid                '''''''''''''HACK: ID2
+    Update Selection Set NewID = uid                '''HACK: （昆明公交中合并ID字段为NewID）
 
 
     '结束通知
@@ -132,10 +143,12 @@ ComeOn:
 
     '清除选中要素
     Select * From Selection Where 1=2
+
 End Sub
 
 
-'测试函数
+
+'作者信息函数
 Sub ToolInfo
     Note "公交站点合并工具" & Chr$(10) &
          "对选中要素赋值统一的新 [坐标] & [样式] & [NewGUID]" & Chr$(10) &
@@ -148,7 +161,9 @@ Sub ToolInfo
 End Sub
 
 
+
 '测试函数
 Sub Test
     Note NumTables()
+    'Update Selection Set obj=CreatePoint(xc, yc)
 End Sub
