@@ -56,7 +56,7 @@ Sub Main
 
     '增加合并公交的菜单（主要为了添加快捷键）
     Create Menu "华业公交数据处理[&B]" As
-        "合并站点[&H]" + "\tSHIFT-H/W#H" Calling UnionBusPoint,
+        "合并站点[&H]" + "\tF12/W%123/XF12" Calling UnionBusPoint,
         '/W#Z就是快捷键为SHIFT+Z
         '/W@Z就是快捷键为ALT+Z
         '/W^Z就是快捷键为CRTL+Z
@@ -101,7 +101,7 @@ ComeOn:
     '遍历点，获取点数、坐标中心、最后一个ID值信息
     Fetch First From Selection
     Do While Not EOT(Selection)
-        uid = Selection.NAME                         '''HACK: （昆明公交中ID字段为NAME）
+        uid = Selection.站点ID                         '''HACK: （昆明公交中ID字段为NAME）
 
         xc = xc + CentroidX(Selection.obj)           '累加坐标值
         yc = yc + CentroidY(Selection.obj)
@@ -135,7 +135,7 @@ ComeOn:
 
     
     '统一赋值新的ID
-    Update Selection Set NewID = uid                '''HACK: （昆明公交中合并ID字段为NewID）
+    Update Selection Set newid = uid                '''HACK: （昆明公交中合并ID字段为NewID）
 
 
     '结束通知
