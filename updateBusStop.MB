@@ -1,0 +1,118 @@
+'*****************************************************************************
+'       Copyright (c) 2012, Guangdong HYLT Co.,Ltd.
+'       All rights reserved.
+'
+' $Workfile: updateBusStop.MB $
+' $Revision: 0.3 $
+' $Author: Lee $
+' $Date: 2012/8/16 $
+'
+' 工具描述:
+'
+'     合并散列的公交站点为同一个站点
+'     更新所有点到统一的几何中心位置 & 更新统一的新ID & 设置样式
+'
+' 历史版本:
+'
+'    Rev 0.1  2012/8/15
+'             实现基本的读取字段信息和遍历点位功能
+'    Rev 0.2  2012/8/16
+'             实现添加按钮功能
+'             解决读取和更新点位XY坐标的功能
+' TODO: 添加热键 & 更新点位样式
+'
+'*****************************************************************************
+
+Include "mapbasic.def"
+Include "icons.def"
+
+Declare Sub Main
+Declare Sub UnionBusPoint
+Declare Sub Test
+
+
+'创建按钮的主函数
+Sub Main
+    Create ButtonPad "公交" As
+        PushButton
+            Calling UnionBusPoint
+            HelpMsg "合并公交站点"
+	        Icon MI_ICON_TRANSPORT_13
+        PushButton
+            Calling Test
+            HelpMsg "测试"
+            Icon MI_ICON_MISC_4
+        Show
+End Sub
+
+
+'合并公交站点
+Sub UnionBusPoint
+    Dim counter As Integer
+    Dim xc, yc As Float
+    Dim uid, irow As String
+    Dim _obj As Object
+    
+
+    counter = 0
+    xc = 0.0
+    yc = 0.0
+
+    '先遍历点，获取点数、坐标中心、最后一个ID值信息
+    Fetch First From Selection
+    Do While Not EOT(Selection)
+        uid = Selection.ID
+        _obj = Selection.obj
+
+        xc = xc + CentroidX(Selection.obj)
+        yc = yc + CentroidY(Selection.obj)
+
+        counter = counter + 1
+        Fetch Next From Selection
+    Loop
+
+    '计算出几何中心坐标值
+    xc = xc / counter
+    yc = yc / counter
+
+
+'    '二次遍历点，更新所有点到几何中心
+'    Fetch First From Selection
+'    Do While Not EOT(Selection)
+'        irow = Selection.ID
+'	    _obj = Selection.obj
+'	
+'        '新坐标
+'        'Alter Object _obj Geography OBJ_GEO_POINTX, xc
+'        'Alter Object _obj Geography OBJ_GEO_POINTY, yc
+'        'Update Selection Set obj=CreatePoint(xc, yc)
+'
+'	    '新样式
+'        'Alter Object _obj Info  '" & object_info_code & "," & new_info_value
+'
+'        Fetch Next From Selection
+'    Loop
+
+    
+    '统一赋值新的ID
+    Update Selection Set ID2 = uid
+    '更新样式
+    Dim mysymb As Symbol
+    mysymb = MakeSymbol(40,65280,12)
+
+    Alter Object _obj Info OBJ_INFO_SYMBOL, mysymb
+    Update Selection Set obj = _obj
+
+    '统一更新坐标到几何中心
+    Update Selection Set obj=CreatePoint(xc, yc)
+
+    '结束通知
+    Note Str$(counter) + "个点位被更新了"
+
+End Sub
+
+
+'测试函数
+Sub Test
+    Note "hello"
+End Sub
