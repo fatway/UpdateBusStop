@@ -19,7 +19,10 @@
 '    Rev 0.2  2012/8/16
 '             实现添加按钮功能
 '             解决读取和更新点位XY坐标的功能
-' TODO: 添加热键 & 更新点位样式
+'    Rev 0.3  2012/8/17
+'             实现变更点位样式功能
+'
+' TODO: 添加热键 & 判断Selection是否存在
 '
 '*****************************************************************************
 
@@ -52,17 +55,18 @@ Sub UnionBusPoint
     Dim xc, yc As Float
     Dim uid, irow As String
     Dim _obj As Object
-    
+    Dim mysymb As Symbol
 
     counter = 0
     xc = 0.0
     yc = 0.0
+    mysymb = MakeSymbol(40,65280,12)
+
 
     '先遍历点，获取点数、坐标中心、最后一个ID值信息
     Fetch First From Selection
     Do While Not EOT(Selection)
         uid = Selection.ID
-        _obj = Selection.obj
 
         xc = xc + CentroidX(Selection.obj)
         yc = yc + CentroidY(Selection.obj)
@@ -76,35 +80,30 @@ Sub UnionBusPoint
     yc = yc / counter
 
 
-'    '二次遍历点，更新所有点到几何中心
-'    Fetch First From Selection
-'    Do While Not EOT(Selection)
-'        irow = Selection.ID
-'	    _obj = Selection.obj
-'	
-'        '新坐标
-'        'Alter Object _obj Geography OBJ_GEO_POINTX, xc
-'        'Alter Object _obj Geography OBJ_GEO_POINTY, yc
-'        'Update Selection Set obj=CreatePoint(xc, yc)
-'
-'	    '新样式
-'        'Alter Object _obj Info  '" & object_info_code & "," & new_info_value
-'
-'        Fetch Next From Selection
-'    Loop
+    '二次遍历点，更新所有点到几何中心并变更样式
+    Fetch First From Selection
+    Do While Not EOT(Selection)
+        irow = Selection.ID
+	    _obj = Selection.obj
+	
+        '新坐标
+        Alter Object _obj Geography OBJ_GEO_POINTX, xc
+        Alter Object _obj Geography OBJ_GEO_POINTY, yc
+        'Update Selection Set obj=CreatePoint(xc, yc)
+
+	    '新样式
+        Alter Object _obj Info OBJ_INFO_SYMBOL, mysymb
+
+        '更新点
+        Update Selection Set obj = _obj 'Where Selection.ID = irow
+
+        Fetch Next From Selection
+    Loop
 
     
     '统一赋值新的ID
     Update Selection Set ID2 = uid
-    '更新样式
-    Dim mysymb As Symbol
-    mysymb = MakeSymbol(40,65280,12)
 
-    Alter Object _obj Info OBJ_INFO_SYMBOL, mysymb
-    Update Selection Set obj = _obj
-
-    '统一更新坐标到几何中心
-    Update Selection Set obj=CreatePoint(xc, yc)
 
     '结束通知
     Note Str$(counter) + "个点位被更新了"
@@ -114,5 +113,5 @@ End Sub
 
 '测试函数
 Sub Test
-    Note "hello"
+    Note "公交站点合并工具\n赋值统一的新 ID & SYMBOL & COORDINATE"
 End Sub
